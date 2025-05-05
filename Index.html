@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت درآمد و هزینه</title>
+    <style>
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: Tahoma, Arial, sans-serif;
+        }
+
+        .date-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .date-group select {
+            width: 33%;
+        }
+
+        button {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+        }
+
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+
+        .edit-btn {
+            background-color: #ffc107;
+        }
+
+        .edit-btn:hover {
+            background-color: #e0a800;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: right;
+        }
+
+        th {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        #errorMessage {
+            color: red;
+            margin-bottom: 15px;
+            display: none;
+            text-align: center;
+        }
+
+        #summary {
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            button, select, input, textarea {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .filter-group, .date-group {
+                flex-direction: column;
+            }
+            .date-group select {
+                width: 100%;
+            }
+            button {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>مدیریت درآمد و هزینه</h1>
+        <div id="errorMessage"></div>
+
+        <!-- فرم ثبت -->
+        <h2>ثبت تراکنش</h2>
+        <form id="transactionForm" aria-label="فرم ثبت تراکنش">
+            <div class="form-group">
+                <label for="type">نوع:</label>
+                <select id="type" required aria-label="نوع تراکنش">
+                    <option value="expense" selected>هزینه</option>
+                    <option value="income">درآمد</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="category">دسته‌بندی:</label>
+                <select id="category" required aria-label="دسته‌بندی تر>انتخاب کنید</option>
+                </select>
+                <input type="text" id="newCategory" placeholder="دسته‌بندی جدید (اختیاری)" aria-label="دسته‌بندی جدید">
+                <button type="button" onclick="addCategory()">افزودن دسته‌بندی</button>
+            </div>
+            <div class="form-group">
+                <label for="amount">مبلغ (تومان):</label>
+                <input type="number" id="amount" min="1" required aria-label="مبلغ تراکنش">
+            </div>
+            <div class="form-group">
+                <label>تاریخ (شمسی):</label>
+                <div class="date-group">
+                    <select id="year" required aria-label="سال">
+                        <option value="">سال</option>
+                    </select>
+                    <select id="month" required aria-label="ماه">
+                        <option value="">ماه</option>
+                    </select>
+                    <select id="day" required aria-label="روز">
+                        <option value="">روز</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="description">توضیحات:</label>
+                <textarea id="description" aria-label="توضیحات تراکنش"></textarea>
+            </div>
+            <button type="submit">ثبت</button>
+        </form>
+
+        <!-- فرم ویرایش -->
+        <h2 style="display: none;" id="editFormTitle">ویرایش تراکنش</h2>
+        <form id="editForm" style="display: none;" aria-label="فرم ویرایش تراکنش">
+            <input type="hidden" id="editIndex">
+            <div class="form-group">
+                <label for="editType">نوع:</label>
+                <select id="editType" required aria-label="نوع تراکنش">
+                    <option value="expense">هزینه</option>
+                    <option value="income">درآمد</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editCategory">دسته‌بندی:</label>
+                <select id="editCategory" required aria-label="دسته‌بندی تراکنش">
+                    <option value="">انتخاب کنید</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editAmount">مبلغ (تومان):</label>
+                <input type="number" id="editAmount" min="1" required aria-label="مبلغ تراکنش">
+            </div>
+            <div class="form-group">
+                <label>تاریخ (شمسی):</label>
+                <div class="date-group">
+                    <select id="editYear" required aria-label="سال">
+                        <option value="">سال</option>
+                    </select>
+                    <select id="editMonth" required aria-label="ماه">
+                        <option value="">ماه</option>
+                    </select>
+                    <select id="editDay" required aria-label="روز">
+                        <option value="">روز</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="editDescription">توضیحات:</label>
+                <textarea id="editDescription" aria-label="توضیحات تراکنش"></textarea>
+            </div>
+            <button type="submit">ذخیره تغییرات</button>
+            <button type="button" onclick="cancelEdit()">لغو</button>
+        </form>
+
+        <!-- گزارش‌ها -->
+        <h2>گزارش‌ها</h2>
+        <div id="summary"></div>
+        <div class="filter-group">
+            <label for="filterType">فیلتر بر اساس:</label>
+            <select id="filterType" aria-label="نوع فیلتر">
+                <option value="date">تاریخ</option>
+                <option value="category">دسته‌بندی</option>
+                <option value="description">توضیحات</option>
+            </select>
+            <input type="text" id="filterValue" placeholder="مقدار فیلتر (مثال: 1403/08 یا مانی)" aria-label="مقدار فیلتر">
+            <button onclick="filterTransactions()">فیلتر</button>
+            <button onclick="clearFilter()">پاکسازی فیلتر</button>
+            <button onclick="exportToExcel()">خروجی اکسل</button>
+        </div>
+        <table id="reportTable" aria-label="جدول گزارش تراکنش‌ها">
+            <thead>
+                <tr>
+                    <th>نوع</th>
+                    <th>دسته‌بندی</th>
+                    <th>مبلغ (تومان)</th>
+                    <th>تاریخ</th>
+                    <th>توضیحات</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+        </table>
+    </div>
+
+    <!-- اضافه کردن کتابخانه SheetJS برای خروجی اکسل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // دسته‌بندی‌های پیش‌فرض
+        const categories = {
+            income: ['حقوق', 'فروش'],
+            expense: ['مانی', 'آوا', 'بهاره', 'محمدرضا', 'سوپر', 'میوه', 'گوشت مرغ ماهی', 'تاکسی', 'اینترنت', 'قبض موبایل', 'قبض برق', 'شارژ ساختمان', 'شارژ دماوند', 'لوازم منزل', 'تعمیرات منزل', 'بنزین', 'تعمیر ماشین', 'کلاس ورزشی', 'کلاس هنری', 'ورزش', 'مدرسه', 'پوشاک', 'سفر', 'سایر']
+        };
+
+        // DOM Elements
+        const typeSelect = document.getElementById('type');
+        const categorySelect = document.getElementById('category');
+        const form = document.getElementById('transactionForm');
+        const editForm = document.getElementById('editForm');
+        const reportBody = document.getElementById('reportBody');
+        const filterType = document.getElementById('filterType');
+        const filterValue = document.getElementById('filterValue');
+        const yearSelect = document.getElementById('year');
+        const monthSelect = document.getElementById('month');
+        const daySelect = document.getElementById('day');
+        const errorMessage = document.getElementById('errorMessage');
+        const summaryDiv = document.getElementById('summary');
+        const editFormTitle = document.getElementById('editFormTitle');
+
+        // نمایش پیام خطا
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // تنظیم منوهای کشویی تاریخ
+        function setupDateSelects(selectYear, selectMonth, selectDay) {
+            selectYear.innerHTML = '<option value="">سال</option>';
+            for (let y = 1404; y <= 1410; y++) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = y;
+                selectYear.appendChild(option);
+            }
+
+            selectMonth.innerHTML = '<option value="">ماه</option>';
+            for (let m = 1; m <= 12; m++) {
+                const option = document.createElement('option');
+                option.value = m.toString().padStart(2, '0');
+                option.textContent = m.toString().padStart(2, '0');
+                selectMonth.appendChild(option);
+            }
+
+            function updateDays() {
+                selectDay.innerHTML = '<option value="">روز</option>';
+                const month = parseInt(selectMonth.value);
+                const year = parseInt(selectYear.value);
+                let maxDays = 31;
+                if (month >= 1 && month <= 6) maxDays = 31;
+                else if (month >= 7 && month <= 11) maxDays = 30;
+                else if (month === 12) {
+                    maxDays = year % 4 === 3 ? 30 : 29; // سال کبیسه شمسی
+                }
+                for (let d = 1; d <= maxDays; d++) {
+                    const option = document.createElement('option');
+                    option.value = d.toString().padStart(2, '0');
+                    option.textContent = d.toString().padStart(2, '0');
+                    selectDay.appendChild(option);
+                }
+            }
+
+            // تنظیم تاریخ پیش‌فرض (امروز)
+            try {
+                const today = new Date().toLocaleDateString('fa-IR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).replace(/(\d+)\/(\d+)\/(\d+)/, '$1,$2,$3').split(',');
+                const year = parseInt(today[0]);
+                if (year >= 1404 && year <= 1410) {
+                    selectYear.value = today[0];
+                    selectMonth.value = today[1];
+                    updateDays();
+                    selectDay.value = today[2];
+                } else {
+                    selectYear.value = '1404';
+                    selectMonth.value = '01';
+                    updateDays();
+                    selectDay.value = '01';
+                }
+            } catch (error) {
+                console.error('خطا در تنظیم تاریخ پیش‌فرض:', error);
+                selectYear.value = '1404';
+                selectMonth.value = '01';
+                updateDays();
+                selectDay.value = '01';
+            }
+
+            selectMonth.addEventListener('change', updateDays);
+            selectYear.addEventListener('change', updateDays);
+        }
+
+        // به‌روزرسانی دسته‌بندی‌ها
+        function updateCategories(selectElement, type) {
+            selectElement.innerHTML = '<option value="">انتخاب کنید</option>';
+            categories[type].forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                selectElement.appendChild(option);
+            });
+        }
+
+        // افزودن دسته‌بندی جدید
+        window.addCategory = () => {
+            const newCategory = document.getElementById('newCategory').value.trim();
+            const type = typeSelect.value;
+            if (!newCategory) {
+                showError('لطفاً نام دسته‌بندی جدید را وارد کنید.');
+                return;
+            }
+            if (!categories[type].includes(newCategory)) {
+                categories[type].push(newCategory);
+                updateCategories(categorySelect, type);
+                categorySelect.value = newCategory;
+                document.getElementById('newCategory').value = '';
+                localStorage.setItem('categories', JSON.stringify(categories));
+            } else {
+                showError('این دسته‌بندی قبلاً وجود دارد.');
+            }
+        };
+
+        // ثبت تراکنش
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const year = yearSelect.value;
+            const month = monthSelect.value;
+            const day = daySelect.value;
+            const amount = parseInt(document.getElementById('amount').value);
+
+            if (!year || !month || !day) {
+                showError('لطفاً تاریخ کامل را انتخاب کنید.');
+                return;
+            }
+
+            if (!categorySelect.value) {
+                showError('لطفاً یک دسته‌بندی انتخاب کنید.');
+                return;
+            }
+
+            if (amount <= 0) {
+                showError('مبلغ باید بیشتر از صفر باشد.');
+                return;
+            }
+
+            const date = `${year}/${month}/${day}`;
+            const transaction = {
+                type: typeSelect.value,
+                category: categorySelect.value,
+                amount: amount,
+                date: date,
+                description: document.getElementById('description').value
+            };
+
+            const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+            transactions.push(transaction);
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+
+            form.reset();
+            typeSelect.value = 'expense';
+            setupDateSelects(yearSelect, monthSelect, daySelect);
+            updateCategories(categorySelect, 'expense');
+            showError('تراکنش با موفقیت ثبت شد!');
+            displayTransactions(transactions);
+        });
+
+        // نمایش جمع درآمدها و هزینه‌ها
+        function displaySummary(transactions) {
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+            const totalExpense = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+            summaryDiv.innerHTML = `
+                جمع درآمدها: ${totalIncome.toLocaleString('fa-IR')} تومان | 
+                جمع هزینه‌ها: ${totalExpense.toLocaleString('fa-IR')} تومان
+            `;
+        }
+
+        // نمایش تراکنش‌ها
+        function displayTransactions(transactions) {
+            reportBody.innerHTML = '';
+            transactions.forEach((t, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${t.type === 'income' ? 'درآمد' : 'هزینه'}</td>
+                    <td>${t.category}</td>
+                    <td>${t.amount.toLocaleString('fa-IR')}</td>
+                    <td>${t.date}</td>
+                    <td>${t.description || '-'}</td>
+                    <td>
+                        <button class="edit-btn" onclick="editTransaction(${index})">ویرایش</button>
+                        <button class="delete-btn" onclick="deleteTransaction(${index})">حذف</button>
+                    </td>
+                `;
+                reportBody.appendChild(row);
+            });
+            displaySummary(transactions);
+        }
+
+        // ویرایش تراکنش
+        window.editTransaction = (index) => {
+            const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+            const transaction = transactions[index];
+
+            document.getElementById('editIndex').value = index;
+            document.getElementById('editType').value = transaction.type;
+            updateCategories(document.getElementById('editCategory'), transaction.type);
+            document.getElementById('editCategory').value = transaction.category;
+            document.getElementById('editAmount').value = transaction.amount;
+            document.getElementById('editDescription').value = transaction.description || '';
+
+            const [year, month, day] = transaction.date.split('/');
+            const editYearSelect = document.getElementById('editYear');
+            const editMonthSelect = document.getElementById('editMonth');
+            const editDaySelect = document.getElementById('editDay');
+            setupDateSelects(editYearSelect, editMonthSelect, editDaySelect);
+            editYearSelect.value = year;
+            editMonthSelect.value = month;
+            editDaySelect.value = day;
+
+            editForm.style.display = 'block';
+            editFormTitle.style.display = 'block';
+            form.style.display = 'none';
+        };
+
+        // ذخیره تغییرات ویرایش
+        editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const index = parseInt(document.getElementById('editIndex').value);
+            const year = document.getElementById('editYear').value;
+            const month = document.getElementById('editMonth').value;
+            const day = document.getElementById('editDay').value;
+            const amount = parseInt(document.getElementById('editAmount').value);
+
+            if (!year || !month || !day) {
+                showError('لطفاً تاریخ کامل را انتخاب کنید.');
+                return;
+            }
+
+            if (!document.getElementById('editCategory').value) {
+                showError('لطفاً یک دسته‌بندی انتخاب کنید.');
+                return;
+            }
+
+            if (amount <= 0) {
+                showError('مبلغ باید بیشتر از صفر باشد.');
+                return;
+            }
+
+            const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+            transactions[index] = {
+                type: document.getElementById('editType').value,
+                category: document.getElementById('editCategory').value,
+                amount: amount,
+                date: `${year}/${month}/${day}`,
+                description: document.getElementById('editDescription').value
+            };
+
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            showError('تراکنش با موفقیت ویرایش شد!');
+            cancelEdit();
+            displayTransactions(transactions);
+        });
+
+        // لغو ویرایش
+        window.cancelEdit = () => {
+            editForm.style.display = 'none';
+            editFormTitle.style.display = 'none';
+            form.style.display = 'block';
+        };
+
+        // حذف تراکنش
+        window.deleteTransaction = (index) => {
+            if (confirm('آیا مطمئن هستید که می‌خواهید این تراکنش را حذف کنید؟')) {
+                const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+                transactions.splice(index, 1);
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+                showError('تراکنش با موفقیت حذف شد!');
+                displayTransactions(transactions);
+            }
+        };
+
+        // خروجی اکسل
+        window.exportToExcel = () => {
+            const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+            const data = transactions.map(t => ({
+                نوع: t.type === 'income' ? 'درآمد' : 'هزینه',
+                دسته_بندی: t.category,
+                مبلغ_تومان: t.amount,
+                تاریخ: t.date,
+                توضیحات: t.description || '-'
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'تراکنش‌ها');
+            XLSX.writeFile(workbook, 'گزارش_تراکنش‌ها.xlsx');
+        };
+
+        // فیلتر تراکنش‌ها
+        window.filterTransactions = () => {
+            const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+            const type = filterType.value;
+            const value = filterValue.value.trim();
+
+            let filtered = transactions;
+            if (value) {
+                filtered = transactions.filter(t => {
+                    if (type === 'date') return t.date.includes(value);
+                    if (type === 'category') return t.category.includes(value);
+                    if (type === 'description') return (t.description || '').includes(value);
+                    return true;
+                });
+            }
+            displayTransactions(filtered);
+        };
+
+        // پاکسازی فیلتر
+        window.clearFilter = () => {
+            filterValue.value = '';
+            displayTransactions(JSON.parse(localStorage.getItem('transactions') || '[]'));
+        };
+
+        // مقداردهی اولیه
+        const savedCategories = JSON.parse(localStorage.getItem('categories') || '{}');
+        if (savedCategories && savedCategories.income && savedCategories.expense) {
+            Object.assign(categories, savedCategories);
+        } else {
+            localStorage.setItem('categories', JSON.stringify(categories));
+        }
+        setupDateSelects(yearSelect, monthSelect, daySelect);
+        typeSelect.value = 'expense';
+        updateCategories(categorySelect, 'expense');
+        typeSelect.addEventListener('change', () => updateCategories(categorySelect, typeSelect.value));
+        document.getElementById('editType').addEventListener('change', () => updateCategories(document.getElementById('editCategory'), document.getElementById('editType').value));
+        displayTransactions(JSON.parse(localStorage.getItem('transactions') || '[]'));
+    </script>
+</body>
+</html>
